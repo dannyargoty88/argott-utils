@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cargando...</title>
+
+  <!-- Favicon Oficial Argott -->
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Phosphor Icons para iconografía moderna -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- SweetAlert2 CDN para modales y alertas de alta calidad -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Estilos CSS Modularizados -->
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+
+<body>
+
+  <!-- Fondos de brillo ambiental -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- ==========================================================================
+       PANTALLA 1: LOGIN (Renderizado Dinámico desde Componente LoginScreen)
+       ========================================================================== -->
+  <main id="login-screen" class="screen active">
+    <!-- Inyectado desde src/components/loginScreen.js -->
+  </main>
+
+  <!-- ==========================================================================
+       PANTALLA 2: DASHBOARD LAYOUT (SIDEBAR IZQUIERDA + MAIN CONTENT)
+       ========================================================================== -->
+  <div id="dashboard-screen" class="screen">
+
+    <!-- Sidebar Colapsable a la Izquierda (Renderizado Dinámicamente desde Componente Sidebar) -->
+    <aside id="app-sidebar" class="sidebar">
+      <!-- Inyectado desde src/components/sidebar.js -->
+    </aside>
+
+    <!-- Área Principal (Navbar + Contenido Central Dinámico) -->
+    <main class="app-main">
+      <header id="app-navbar" class="navbar">
+        <!-- Inyectado completamente desde JavaScript (navbar.js) -->
+      </header>
+
+      <!-- Vistas Dinámicas -->
+      <div id="main-content-view" class="dashboard-container">
+        <!-- Inyectado dinámicamente con JavaScript Modules -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Scripts de Aplicación Argott -->
+  <script src="src/config/constants.js"></script>
+  <script src="src/utils/crypto.js"></script>
+  <script src="src/utils/alert.js"></script>
+  <script src="src/database/db.js"></script>
+  <script src="src/components/navbar.js"></script>
+  <script src="src/components/sidebar.js"></script>
+  <script src="src/components/loginScreen.js"></script>
+  <script src="src/views/dashboard.js"></script>
+  <script src="src/views/gitDiff.js"></script>
+  <script src="src/views/jsonTools.js"></script>
+  <script src="src/views/jwtDecoder.js"></script>
+  <script src="src/views/base64Tool.js"></script>
+  <script src="src/views/sqlFormatter.js"></script>
+  <script src="src/views/httpClient.js"></script>
+  <script src="src/views/codeConverter.js"></script>
+  <script src="src/views/codeHelper.js"></script>
+  <script src="src/views/viewIcons.js"></script>
+  <script src="src/views/settings.js"></script>
+  <script src="src/main.js"></script>
+</body>
+
+</html>

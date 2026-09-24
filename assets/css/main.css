@@ -1,0 +1,135 @@
+/* ==========================================================================
+   Argott CSS - Main Core Imports & Variables
+   ========================================================================== */
+@import "./layout.css";
+@import "./components.css";
+@import "./views.css";
+
+:root {
+  /* Color Palette Dark (Default) */
+  --bg-dark: #0a0c14;
+  --bg-card: rgba(18, 22, 36, 0.65);
+  --bg-card-hover: rgba(26, 32, 53, 0.75);
+  --bg-input: rgba(15, 20, 32, 0.8);
+  --bg-sidebar: rgba(12, 15, 26, 0.95);
+  --bg-navbar: rgba(10, 12, 20, 0.8);
+  
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+  --accent-glow: rgba(99, 102, 241, 0.35);
+  --accent-secondary: #ec4899;
+  --accent-cyan: #06b6d4;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(99, 102, 241, 0.6);
+
+  /* Fonts & Radius */
+  --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Glassmorphism */
+  --glass-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+  --backdrop-blur: blur(16px);
+  
+  /* Ambient Background Lights */
+  --bg-glow-color-1: rgba(99, 102, 241, 0.35);
+  --bg-glow-color-2: rgba(236, 72, 153, 0.35);
+}
+
+/* Light Theme Variables - Soft Clean Blue Palette */
+[data-theme="light"] {
+  --bg-dark: #f0f4f9;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: #ffffff;
+  --bg-input: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-navbar: rgba(255, 255, 255, 0.85);
+
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.25);
+  --accent-secondary: #06b6d4;
+
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+
+  --border-light: rgba(226, 232, 240, 0.8);
+  --border-focus: rgba(59, 130, 246, 0.5);
+  --glass-shadow: 0 10px 25px rgba(148, 163, 184, 0.12);
+
+  --bg-glow-color-1: rgba(186, 230, 253, 0.6);
+  --bg-glow-color-2: rgba(224, 242, 254, 0.6);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ambient Background Lights */
+.bg-glow-1, .bg-glow-2 {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.bg-glow-1 {
+  top: -10%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, var(--bg-glow-color-1) 0%, transparent 70%);
+}
+
+.bg-glow-2 {
+  bottom: -15%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, var(--bg-glow-color-2) 0%, transparent 70%);
+}
+
+.screen {
+  display: none !important;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.screen.active {
+  display: flex !important;
+  opacity: 1;
+}
