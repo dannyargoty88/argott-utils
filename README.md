@@ -4,12 +4,6 @@
 
 ---
 
-## 🚀 Características y Herramientas Incluidas
-
-La aplicación cuenta con una interfaz intuitiva con soporte para **Modo Oscuro / Claro**, autenticación segura por PIN/Hash y almacenamiento local.
-
----
-
 ## 🛠️ Tecnologías Utilizadas
 
 - **Frontend Core**: HTML5 Semántico, Vanilla JavaScript (ES6+ Modules).
