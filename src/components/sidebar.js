@@ -89,7 +89,7 @@ class Sidebar {
     this.sidebarEl.innerHTML = `
       <div class="sidebar-header">
         <div id="sidebar-brand" class="sidebar-brand" title="Expandir menú">
-          <img src="assets/images/logo.png" alt="Logo">
+          <img src="assets/images/logo_v2.png" alt="Logo">
           <span class="brand-text">${escapeHTML(appName)}</span>
         </div>
         <button id="btn-toggle-sidebar" class="btn-toggle-sidebar" title="Colapsar / Expandir Menú">

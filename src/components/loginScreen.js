@@ -20,7 +20,7 @@ class LoginScreen {
     this.container.innerHTML = `
       <div class="login-card">
         <div class="logo-badge">
-          <img src="assets/images/logo.png" alt="Argott Logo">
+          <img src="assets/images/logo_v2.png" alt="Argott Logo">
         </div>
         <h1 class="login-title">${escapeHTML(appName)}</h1>
         <p class="login-subtitle">Introduce tu código de acceso para continuar</p>
