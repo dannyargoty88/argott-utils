@@ -111,6 +111,8 @@ class App {
       renderCodeHelperView(this.mainContent);
     } else if (viewName === "view-icons") {
       renderViewIconsView(this.mainContent);
+    } else if (viewName === "pricing") {
+      renderPricingView(this.mainContent);
     } else if (viewName === "settings") {
       renderSettingsView(this.mainContent);
     }

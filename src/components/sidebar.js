@@ -28,6 +28,15 @@ const SIDEBAR_MENU_SCHEMA = [
     ]
   },
   {
+    type: "group",
+    label: "Documentos",
+    icon: "ph-files",
+    open: true,
+    items: [
+      { view: "pricing", label: "Pricing", icon: "ph-currency-dollar" }
+    ]
+  },
+  {
     type: "link",
     view: "settings",
     label: "Configuración",
