@@ -9,10 +9,25 @@
 const STORAGE_KEY_PRICING_TEMPLATE = "argott_pricing_template";
 const HTML2CANVAS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
 const JSPDF_CDN = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-const PROPOSAL_LOGO = "assets/images/logo_v1.png";
-const PROPOSAL_TAX_RATE = 0.19;
-const PROPOSAL_EXTRA_USER_PRICE = 5;
+// Data URI (src/config/proposalLogo.js) para que el logo no bloquee la exportación a PDF en file://
+const PROPOSAL_LOGO = typeof PROPOSAL_LOGO_DATA_URI !== "undefined" ? PROPOSAL_LOGO_DATA_URI : "assets/images/logo_v1.png";
 const PROPOSAL_VALIDITY_DAYS = 30;
+
+/**
+ * Todas las tarifas se expresan como % del salario mínimo (SMMLV).
+ * Estos son los valores por defecto; el formulario de la vista los sobrescribe en cada render.
+ */
+const PROPOSAL_SMMLV_DEFAULT = { year: 2026, value: 1750905 };
+const PROPOSAL_SMMLV = { ...PROPOSAL_SMMLV_DEFAULT };
+const PROPOSAL_IMPLEMENTATION_PCT = 50;
+const PROPOSAL_EXTRA_USER_PCT = 1;
+
+/**
+ * Valor en COP de un % del SMMLV, redondeado a la centena más cercana.
+ */
+function smmlvPct(pct) {
+  return Math.round((PROPOSAL_SMMLV.value * pct) / 100 / 100) * 100;
+}
 
 /**
  * Plantillas visuales disponibles. Cada una aplica una clase CSS (.tpl-*) sobre el documento.
@@ -30,9 +45,8 @@ const ARGOTT_PROPOSAL_DATA = {
   company: {
     name: "Argott Software",
     tagline: "Software empresarial en la nube, a la medida de tu operación",
-    email: "ventas@argott.app",
-    web: "www.argott.app",
-    phone: "+57 300 000 0000"
+    email: "danny.argoty@hotmail.com",
+    phone: "+57 311 660 0469"
   },
 
   presentation: {
@@ -41,16 +55,16 @@ const ARGOTT_PROPOSAL_DATA = {
       { icon: "ph-database", title: "Base de datos dedicada", text: "Cada cliente opera sobre su propia base de datos aislada. Tu información nunca se mezcla con la de otras empresas." },
       { icon: "ph-shield-check", title: "Seguridad por diseño", text: "Autenticación con tokens firmados, validación de acceso por dominio y bloqueo de accesos cruzados entre clientes." },
       { icon: "ph-puzzle-piece", title: "Modular y escalable", text: "Activa solo los módulos que necesitas hoy y crece en usuarios, almacenamiento y funcionalidades cuando lo requieras." },
-      { icon: "ph-chart-line-up", title: "Reportes y automatización", text: "Reportes en PDF, Excel y Word, correos transaccionales con trazabilidad y procesos programados." }
+      { icon: "ph-chart-line-up", title: "Reportes y automatización", text: "Dashboards con indicadores en tiempo real, reportes en PDF, Excel y Word, correos transaccionales con trazabilidad y procesos programados." }
     ],
     modules: [
-      { icon: "ph-briefcase", name: "Operación", items: ["Clientes", "Agentes", "Aseguradoras", "Enrolamiento"] },
-      { icon: "ph-currency-circle-dollar", name: "Financiero", items: ["Inversiones", "Movimientos", "Conciliación", "Indicadores"] },
-      { icon: "ph-gear-six", name: "Administración", items: ["Usuarios y roles", "Configuración", "Log de correos", "Auditoría"] }
+      { icon: "ph-sliders-horizontal", name: "Parámetros", items: ["Países, departamentos y ciudades", "Tipos de identificación y documentos", "Parentesco", "Estados Migratorios"] },
+      { icon: "ph-gear-six", name: "Administración", items: ["Empresa y sedes", "Usuarios y perfiles", "Configuración", "Log de correos"] },
+      { icon: "ph-briefcase", name: "Operación", items: ["Clientes y Agentes", "Aseguradoras", "Enrolamiento", "Eventos y notificaciones", "Entre otros ..."] }
     ],
     stats: [
       { value: "99.9%", label: "Disponibilidad objetivo" },
-      { value: "Diarios", label: "Backups automáticos" },
+      { value: "Backups", label: "Con posibilidad de copias de seguridad" },
       { value: "0", label: "Instalaciones locales" },
       { value: "100%", label: "Soporte en español" }
     ]
@@ -61,22 +75,22 @@ const ARGOTT_PROPOSAL_DATA = {
       id: "basico",
       name: "Básico",
       badge: "",
-      price: "$49",
-      period: "/ mes",
-      monthly: 49,
+      pct: 10,
+      fromPrice: false,
       includedUsers: 5,
-      setupFee: 150,
       training: "Videos y guías de uso",
-      description: "Para pequeñas empresas que inician su operación digital",
+      description: "Para empresas que inician su operación digital con un equipo pequeño",
       features: [
-        "1 tenant con base de datos dedicada",
         "Hasta 5 usuarios",
-        "Módulo de Operación (clientes, agentes, aseguradoras)",
-        "Reportes PDF y Excel",
+        "Base de datos dedicada para tu empresa",
+        "Módulos de Parámetros, Administración y Operación",
+        "Envío de correos vía API: hasta 3.000 / mes (máx. 100 por día)",
+        "Uso de tu dominio propio en la app y los correos",
+        "Dashboard de inicio y reportes PDF / Excel",
         "Hasta 5 GB de almacenamiento",
-        "Subdominio argott.app incluido",
-        "Backups semanales",
-        "Soporte por correo electrónico",
+        "Copias de seguridad semanales",
+        "Soporte por correo electrónico (48h hábiles)",
+        "8 horas / mes de soporte y desarrollo incluidas",
         "99.5% de disponibilidad objetivo",
         "7 días de historial de logs"
       ],
@@ -87,52 +101,55 @@ const ARGOTT_PROPOSAL_DATA = {
       id: "profesional",
       name: "Profesional",
       badge: "Más popular",
-      price: "$149",
-      period: "/ mes",
-      monthly: 149,
-      includedUsers: 25,
-      setupFee: 400,
+      pct: 20,
+      fromPrice: false,
+      includedUsers: 15,
       training: "2 sesiones virtuales en vivo",
-      description: "Para equipos en crecimiento que operan todos los procesos del negocio",
+      description: "Para equipos en crecimiento con alto volumen de comunicación con sus clientes",
       features: [
-        "1 tenant con base de datos dedicada",
-        "Hasta 25 usuarios",
-        "Todos los módulos: Operación, Financiero y Administración",
+        "Hasta 15 usuarios",
+        "Base de datos dedicada para tu empresa",
+        "Módulos de Parámetros, Administración y Operación",
+        "Envío de correos vía API: hasta 50.000 / mes, sin límite diario",
+        "Uso de tu dominio propio en la app y los correos",
+        "Dashboards con indicadores de gestión",
         "Reportes PDF / Excel / Word programados",
         "Hasta 50 GB de almacenamiento",
-        "Dominio personalizado",
-        "Correos transaccionales con log de envíos",
-        "Backups diarios",
-        "Soporte prioritario (24h hábiles)",
+        "Copias de seguridad diarias",
+        "Soporte prioritario por correo y WhatsApp (24h hábiles)",
+        "16 horas / mes de soporte y desarrollo incluidas",
+        "Ambiente de pruebas disponible",
         "99.9% de disponibilidad objetivo",
-        "30 días de historial de auditoría"
+        "30 días de historial de logs"
       ],
-      cta: "Elegir Profesional — $149/mes",
+      cta: "Elegir Profesional",
       featured: true
     },
     {
       id: "enterprise",
       name: "Enterprise",
       badge: "",
-      price: "Personalizado",
-      period: "",
-      monthly: 499,
+      pct: 40,
+      fromPrice: true,
       includedUsers: null,
-      setupFee: 1500,
       training: "Onboarding dedicado",
-      description: "Para organizaciones con requisitos de escala, cumplimiento y soporte dedicado",
+      description: "Para organizaciones que requieren infraestructura dedicada y soporte prioritario",
       features: [
-        "Múltiples tenants / filiales",
         "Usuarios ilimitados",
-        "Inicio de sesión único (SSO)",
-        "Control de acceso basado en roles avanzado",
-        "Servidor y base de datos dedicados",
-        "Despliegue en tu propia nube",
-        "Integraciones y desarrollos a medida",
-        "Migración de datos y onboarding",
-        "SLA de soporte con gestor de cuenta",
-        "99.99% de disponibilidad objetivo",
-        "12 meses de retención de auditoría"
+        "Servidores y base de datos dedicados",
+        "Alta disponibilidad con réplicas",
+        "Envío de correos vía API: desde 50.000 / mes (ampliable)",
+        "Uso de tu dominio propio en la app y los correos",
+        "Dashboards personalizados",
+        "Inicio de sesión único (SSO) y roles avanzados",
+        "Integraciones vía API con otros sistemas",
+        "Hasta 100 GB de almacenamiento",
+        "Copias de seguridad diarias con réplica",
+        "Soporte telefónico con gestor de cuenta",
+        "32 horas / mes de soporte y desarrollo incluidas",
+        "Ambiente de pruebas disponible",
+        "99.95% de disponibilidad objetivo",
+        "90 días de historial de logs"
       ],
       cta: "Contactar a Ventas",
       featured: false
@@ -140,67 +157,67 @@ const ARGOTT_PROPOSAL_DATA = {
   ],
 
   addons: [
-    { icon: "ph-user-plus", name: "Usuario adicional", price: "$5", unit: "por usuario / mes" },
-    { icon: "ph-hard-drives", name: "Almacenamiento", price: "$0.10", unit: "por GB / mes" },
-    { icon: "ph-envelope-simple", name: "Correos", price: "$1", unit: "por cada 1.000 envíos" },
-    { icon: "ph-buildings", name: "Tenant adicional", price: "$39", unit: "por tenant / mes" },
-    { icon: "ph-headset", name: "Soporte técnico", price: "$25", unit: "por hora" }
+    { icon: "ph-user-plus", name: "Usuario adicional", pct: PROPOSAL_EXTRA_USER_PCT, unit: "por usuario / mes" },
+    { icon: "ph-envelope-simple", name: "Correos adicionales", pct: 0.3, unit: "por cada 1.000 (Profesional y Enterprise)" },
+    { icon: "ph-hard-drives", name: "Almacenamiento", pct: 1, unit: "por cada 10 GB / mes" },
+    { icon: "ph-headset", name: "Hora adicional", pct: 5, unit: "soporte o desarrollo" },
   ],
-  pricingFootnote: "Precios en USD. No incluyen impuestos. Facturación mensual; 2 meses gratis con pago anual. El plan Enterprise parte desde $499/mes según alcance.",
 
   // Comparativa: true = incluido, false = no incluido, string = valor
   comparison: [
     {
       section: "Recursos y límites",
       rows: [
-        ["Usuarios incluidos", "5", "25", "Ilimitados"],
-        ["Tenants (bases de datos)", "1", "1", "Múltiples"],
-        ["Almacenamiento", "5 GB", "50 GB", "Desde 500 GB"],
-        ["Correos transaccionales / mes", "1.000", "10.000", "Personalizado"],
-        ["Backups", "Semanales (4 retenidos)", "Diarios (30 retenidos)", "Diarios + réplica"],
-        ["Historial de auditoría", "7 días", "30 días", "12 meses"]
+        ["Usuarios incluidos", "5", "15", "Ilimitados"],
+        ["Infraestructura", "Compartida, BD dedicada", "Compartida, mayor capacidad", "Dedicada con réplicas"],
+        ["Almacenamiento", "5 GB", "50 GB", "100 GB"],
+        ["Correos vía API / mes", "3.000", "50.000", "Desde 50.000"],
+        ["Límite diario de correos", "100 por día", "Sin límite", "Sin límite"],
+        ["Copias de seguridad", "Semanales", "Diarias", "Diarias + réplica"],
+        ["Historial de logs", "7 días", "30 días", "90 días"],
+        ["Ambiente de pruebas", false, true, true]
       ]
     },
     {
       section: "Módulos y funcionalidades",
       rows: [
-        ["Módulo de Operación", true, true, true],
-        ["Módulo Financiero", false, true, true],
-        ["Administración y configuración", "Básica", true, true],
+        ["Parámetros", true, true, true],
+        ["Administración", true, true, true],
+        ["Operación (módulos pactados)", true, true, true],
+        ["Dashboards", "Inicio", "Indicadores", "Personalizados"],
         ["Reportes PDF y Excel", true, true, true],
-        ["Reportes Word y programados", false, true, true],
-        ["API REST para integraciones", false, "Lectura", "Completa"]
+        ["Reportes Word y programados", true, true, true],
+        ["API REST para integraciones", false, "Limitada", "Completa"]
       ]
     },
     {
       section: "Seguridad y acceso",
       rows: [
         ["Base de datos aislada por cliente", true, true, true],
-        ["Bloqueo de acceso cruzado entre clientes", true, true, true],
-        ["Roles y permisos", "Predefinidos", "Personalizables", "RBAC avanzado"],
-        ["Dominio propio", false, true, true],
-        ["Inicio de sesión único (SSO)", false, false, true],
-        ["Restricción por IP", false, false, true]
+        ["Dominio propio (app y correos)", true, true, true],
+        ["Roles y permisos", "Predefinidos", "Personalizables", "Avanzado"],
+        ["Autenticación (OTP)", true, true, true],
       ]
     },
     {
       section: "Soporte y servicio",
       rows: [
-        ["Canales", "Correo", "Correo y chat", "Correo, chat, teléfono"],
+        ["Canales", "Correo", "Correo y WhatsApp", "Correo, WhatsApp, teléfono"],
         ["Primera respuesta", "48h hábiles", "24h hábiles", "4h (críticos 1h)"],
-        ["Disponibilidad objetivo", "99.5%", "99.9%", "99.99%"],
-        ["Capacitación", "Videos y guías", "2 sesiones en vivo", "Onboarding dedicado"],
-        ["Gestor de cuenta", false, false, true]
+        ["Horas de soporte y desarrollo / mes", "8 horas", "16 horas", "32 horas"],
+        ["Disponibilidad objetivo", "99.5%", "99.9%", "99.95%"],
+        ["Capacitación", "Videos y guías", "Sesiones en vivo", "Onboarding dedicado"],
       ]
     }
   ],
 
   support: {
     lead: "Nuestro equipo acompaña a cada cliente desde la puesta en marcha y durante toda la vigencia del contrato. Los tiempos de atención dependen del plan contratado y de la severidad del incidente.",
+    // contact: dato del formulario que se muestra en el canal ("email" o "phone")
     channels: [
-      { icon: "ph-envelope-simple", title: "Correo electrónico", text: "soporte@argott.app — todos los planes. Cada solicitud genera un ticket con seguimiento." },
-      { icon: "ph-chat-circle-dots", title: "Chat en la plataforma", text: "Planes Profesional y Enterprise, directamente desde la aplicación." },
-      { icon: "ph-phone", title: "Línea telefónica", text: "Plan Enterprise, con gestor de cuenta asignado y escalamiento directo." }
+      { icon: "ph-envelope-simple", title: "Correo electrónico", contact: "email", text: "Todos los planes. Cada solicitud genera un ticket con seguimiento." },
+      { icon: "ph-whatsapp-logo", title: "WhatsApp", contact: "phone", text: "Planes Profesional y Enterprise, por chat directo." },
+      { icon: "ph-phone", title: "Línea telefónica", contact: "phone", text: "Plan Enterprise, con gestor de cuenta asignado y escalamiento directo." }
     ],
     schedule: "Horario de atención: lunes a viernes de 8:00 a.m. a 6:00 p.m. (hora Colombia). Plan Enterprise: incidentes críticos 24/7.",
     severities: [
@@ -213,11 +230,6 @@ const ARGOTT_PROPOSAL_DATA = {
       "Ventana de mantenimiento programado: domingos de 12:00 a.m. a 4:00 a.m. (hora Colombia).",
       "Todo mantenimiento programado se notifica con al menos 72 horas de anticipación.",
       "Las actualizaciones de versión están incluidas en la suscripción sin costo adicional."
-    ],
-    credits: [
-      { range: "Entre 99.0% y la disponibilidad objetivo", credit: "10% de la mensualidad" },
-      { range: "Entre 95.0% y 99.0%", credit: "25% de la mensualidad" },
-      { range: "Menor a 95.0%", credit: "50% de la mensualidad" }
     ]
   },
 
@@ -226,7 +238,9 @@ const ARGOTT_PROPOSAL_DATA = {
     { title: "Vigencia y renovación", text: "El contrato inicia en la fecha de activación del servicio y se renueva automáticamente por periodos iguales, salvo aviso de no renovación con 30 días de anticipación." },
     { title: "Facturación y pagos", text: "La suscripción se factura por periodo anticipado. El pago debe realizarse dentro de los 5 días hábiles siguientes a la emisión de la factura." },
     { title: "Mora y suspensión", text: "Con más de 15 días de mora, el servicio podrá suspenderse previo aviso. Los datos se conservan intactos durante la suspensión y el acceso se restablece al normalizar el pago." },
-    { title: "Ajuste de precios", text: "Las tarifas podrán ajustarse una vez al año, en la renovación, con base en el IPC más dos puntos, notificando al Cliente con al menos 30 días de anticipación." },
+    { title: "Ajuste de precios", text: "Las tarifas se expresan como porcentaje del salario mínimo mensual legal vigente (SMMLV) y se actualizan automáticamente cada enero con el nuevo salario mínimo decretado." },
+    { title: "Implementación", text: "El pago inicial de implementación cubre el levantamiento del requerimiento, la habilitación de módulos, el cargue de información inicial y el diseño y desarrollo de los módulos de operación pactados en la negociación." },
+    { title: "Nuevos requerimientos", text: "Las funcionalidades no pactadas inicialmente (por ejemplo, mensajería por WhatsApp mediante la API de Meta) se atienden mediante nuevas cotizaciones, que pueden o no modificar el valor de la mensualidad." },
     { title: "Propiedad de los datos", text: "La información registrada en la plataforma es propiedad exclusiva del Cliente. Al finalizar el contrato podrá exportarla en formatos estándar durante los 30 días siguientes." },
     { title: "Protección de datos", text: "Argott Software actúa como encargado del tratamiento y aplica la normativa vigente de protección de datos personales (Ley 1581 de 2012 en Colombia y normas que la complementen)." },
     { title: "Confidencialidad", text: "Ambas partes se obligan a mantener en reserva la información técnica, comercial y financiera a la que tengan acceso con ocasión del contrato, aun después de su terminación." },
@@ -237,12 +251,12 @@ const ARGOTT_PROPOSAL_DATA = {
   ],
 
   futureServices: [
+    { icon: "ph-whatsapp-logo", name: "Mensajería por WhatsApp", text: "Notificaciones y mensajes a tus clientes mediante la API de WhatsApp Business (Meta). El costo por conversación de Meta se factura según consumo.", price: "Por cotizar" },
+    { icon: "ph-squares-four", name: "Nuevos módulos de operación", text: "Diseño y desarrollo de módulos adicionales a los pactados en la implementación.", price: "Por cotizar" },
     { icon: "ph-receipt", name: "Facturación electrónica", text: "Emisión de facturas electrónicas integrada con el ente tributario.", price: "Por cotizar" },
     { icon: "ph-device-mobile", name: "Aplicación móvil", text: "App iOS y Android para consultas y operaciones en campo.", price: "Por cotizar" },
-    { icon: "ph-chart-pie-slice", name: "Tablero BI y analítica", text: "Indicadores, tableros interactivos y exportación de datos.", price: "Desde $79 / mes" },
-    { icon: "ph-plugs-connected", name: "Integraciones a medida", text: "Conexión con ERP, CRM, pasarelas de pago u otros sistemas.", price: "$25 / hora" },
-    { icon: "ph-database", name: "Migración de datos", text: "Traslado de información desde tu sistema actual.", price: "Desde $300" },
-    { icon: "ph-graduation-cap", name: "Capacitación adicional", text: "Sesiones para nuevos equipos o funcionalidades.", price: "$40 / sesión" }
+    { icon: "ph-plugs-connected", name: "Integraciones a medida", text: "Conexión con ERP, CRM, pasarelas de pago u otros sistemas.", pct: 5, unit: "/ hora" },
+    { icon: "ph-graduation-cap", name: "Capacitación adicional", text: "Sesiones para nuevos equipos o funcionalidades.", pct: 3, unit: "/ sesión" }
   ],
 
   nextSteps: [
@@ -262,15 +276,15 @@ function renderPricingView(container) {
   `).join("");
 
   const planOptions = ARGOTT_PROPOSAL_DATA.plans.map(p => `
-    <option value="${p.id}"${p.featured ? " selected" : ""}>${escapeHTML(p.name)}</option>
+    <option value="${p.id}"${p.id === "basico" ? " selected" : ""}>${escapeHTML(p.name)}</option>
   `).join("");
 
   container.innerHTML = `
     <div class="pricing-view-container">
 
-      <!-- Encabezado de la Vista -->
+      <!-- Encabezado + Datos de la Propuesta -->
       <div class="panel-box">
-        <div class="panel-header" style="justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div class="panel-header pricing-panel-header" style="justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h2 class="panel-title" style="font-size: 1.25rem;">
               <i class="ph ph-currency-dollar" style="color: var(--accent-primary);"></i> Pricing
@@ -281,18 +295,15 @@ function renderPricingView(container) {
           </div>
 
           <div class="pricing-header-actions">
-            <select id="pricing-template-select" class="form-control converter-select" title="Tipo de plantilla">
+            <select id="pricing-template-select" class="form-control" title="Tipo de plantilla">
               ${templateOptions}
             </select>
-            <button id="btn-pricing-pdf" class="btn-primary" style="width: auto; padding: 0.5rem 1rem;">
+            <button id="btn-pricing-pdf" class="btn-primary">
               <i class="ph ph-file-pdf"></i> Descargar PDF
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- Datos de la Propuesta -->
-      <div class="panel-box">
         <div class="proposal-form-grid">
           <label class="converter-select-group">
             <span class="converter-label">Cliente</span>
@@ -312,7 +323,7 @@ function renderPricingView(container) {
           </label>
           <label class="converter-select-group">
             <span class="converter-label">Usuarios</span>
-            <input id="proposal-users" class="form-control" type="number" min="1" value="25">
+            <input id="proposal-users" class="form-control" type="number" min="1" value="5">
           </label>
           <label class="converter-select-group">
             <span class="converter-label">Duración</span>
@@ -323,6 +334,38 @@ function renderPricingView(container) {
               <option value="24">24 meses</option>
             </select>
           </label>
+          <label class="converter-select-group">
+            <span class="converter-label">Correo de soporte</span>
+            <input id="proposal-email" class="form-control" type="email" value="${escapeHTML(ARGOTT_PROPOSAL_DATA.company.email)}">
+          </label>
+          <label class="converter-select-group">
+            <span class="converter-label">Teléfono / WhatsApp</span>
+            <input id="proposal-phone" class="form-control" type="text" value="${escapeHTML(ARGOTT_PROPOSAL_DATA.company.phone)}">
+          </label>
+          <label class="converter-select-group">
+            <span class="converter-label">Hoja de cotización</span>
+            <select id="proposal-include-quote" class="form-control">
+              <option value="yes" selected>Incluir</option>
+              <option value="no">No incluir</option>
+            </select>
+          </label>
+        </div>
+
+        <span class="proposal-form-section">Tarifas</span>
+        <div class="proposal-form-grid cols-5">
+          <label class="converter-select-group">
+            <span class="converter-label">Salario mínimo (SMMLV)</span>
+            <input id="proposal-smmlv" class="form-control" type="text" inputmode="numeric" value="${formatCurrency(PROPOSAL_SMMLV_DEFAULT.value)}">
+          </label>
+          <label class="converter-select-group">
+            <span class="converter-label">Año del SMMLV</span>
+            <input id="proposal-smmlv-year" class="form-control" type="number" min="2000" value="${PROPOSAL_SMMLV_DEFAULT.year}">
+          </label>
+          ${ARGOTT_PROPOSAL_DATA.plans.map(p => `
+          <label class="converter-select-group">
+            <span class="converter-label">% Plan ${escapeHTML(p.name)}</span>
+            <input id="proposal-pct-${p.id}" class="form-control" type="number" min="0" step="0.1" value="${p.pct}">
+          </label>`).join("")}
         </div>
       </div>
 
@@ -344,13 +387,28 @@ function renderPricingView(container) {
     number: container.querySelector("#proposal-number").value.trim(),
     planId: container.querySelector("#proposal-plan").value,
     users: Math.max(1, parseInt(container.querySelector("#proposal-users").value, 10) || 1),
-    months: parseInt(container.querySelector("#proposal-months").value, 10)
+    months: parseInt(container.querySelector("#proposal-months").value, 10),
+    email: container.querySelector("#proposal-email").value.trim(),
+    phone: container.querySelector("#proposal-phone").value.trim(),
+    includeQuote: container.querySelector("#proposal-include-quote").value === "yes",
+    smmlv: parseInt(container.querySelector("#proposal-smmlv").value.replace(/\D/g, ""), 10) || PROPOSAL_SMMLV_DEFAULT.value,
+    smmlvYear: parseInt(container.querySelector("#proposal-smmlv-year").value, 10) || PROPOSAL_SMMLV_DEFAULT.year,
+    pcts: Object.fromEntries(ARGOTT_PROPOSAL_DATA.plans.map(p => {
+      const value = parseFloat(container.querySelector(`#proposal-pct-${p.id}`).value);
+      return [p.id, Number.isFinite(value) && value >= 0 ? value : p.pct];
+    }))
   });
 
   const render = () => {
+    const includeQuote = container.querySelector("#proposal-include-quote").value === "yes";
+    container.querySelector("#proposal-users").disabled = !includeQuote;
+    container.querySelector("#proposal-months").disabled = !includeQuote;
     const template = PRICING_TEMPLATES.find(t => t.id === selectEl.value) || PRICING_TEMPLATES[0];
     docEl.className = `proposal-doc ${template.className}`;
-    docEl.innerHTML = buildProposalHTML(ARGOTT_PROPOSAL_DATA, readForm());
+    const form = readForm();
+    Object.assign(PROPOSAL_SMMLV, { value: form.smmlv, year: form.smmlvYear });
+    const data = { ...ARGOTT_PROPOSAL_DATA, plans: ARGOTT_PROPOSAL_DATA.plans.map(p => ({ ...p, pct: form.pcts[p.id] })) };
+    docEl.innerHTML = buildProposalHTML(data, form);
   };
 
   render();
@@ -361,6 +419,11 @@ function renderPricingView(container) {
   });
 
   formInputs.forEach(input => input.addEventListener("input", render));
+
+  const smmlvInput = container.querySelector("#proposal-smmlv");
+  smmlvInput.addEventListener("blur", () => {
+    smmlvInput.value = formatCurrency(readForm().smmlv);
+  });
 
   pdfBtn.addEventListener("click", async () => {
     const originalHtml = pdfBtn.innerHTML;
@@ -405,8 +468,8 @@ function buildProposalHTML(data, form) {
     buildComparisonPage(ctx),
     buildSupportPage(ctx),
     buildTermsPage(ctx),
-    buildQuotePage(ctx),
-    buildNextStepsPage(ctx)
+    buildNextStepsPage(ctx),
+    ...(form.includeQuote ? [buildQuotePage(ctx)] : [])
   ];
 
   return bodies.map((body, index) => {
@@ -477,9 +540,8 @@ function buildCoverPage(ctx) {
 
     <div class="cover-contact">
       <strong>${escapeHTML(data.company.name)}</strong>
-      <span><i class="ph ph-envelope-simple"></i> ${escapeHTML(data.company.email)}</span>
-      <span><i class="ph ph-globe"></i> ${escapeHTML(data.company.web)}</span>
-      <span><i class="ph ph-phone"></i> ${escapeHTML(data.company.phone)}</span>
+      ${ctx.form.email ? `<span><i class="ph ph-envelope-simple"></i> ${escapeHTML(ctx.form.email)}</span>` : ""}
+      ${ctx.form.phone ? `<span><i class="ph ph-whatsapp-logo"></i> ${escapeHTML(ctx.form.phone)}</span>` : ""}
     </div>
   `;
 }
@@ -535,9 +597,10 @@ function buildPlansPage(ctx) {
           ${plan.badge ? `<span class="pricing-badge">${escapeHTML(plan.badge)}</span>` : ""}
         </div>
         <div class="pricing-price-row">
-          <span class="pricing-price${plan.period ? "" : " custom"}">${escapeHTML(plan.price)}</span>
-          ${plan.period ? `<span class="pricing-period">${escapeHTML(plan.period)}</span>` : ""}
+          <span class="pricing-price">${formatCurrency(smmlvPct(plan.pct))}</span>
+          <span class="pricing-period">/ mes</span>
         </div>
+        <span class="pricing-price-note">${plan.fromPrice ? "Desde el " : ""}${plan.pct}% del SMMLV ${PROPOSAL_SMMLV.year}</span>
         <p class="pricing-plan-desc">${escapeHTML(plan.description)}</p>
         <ul class="pricing-features">${featuresHtml}</ul>
         <div class="pricing-cta">${escapeHTML(plan.cta)}</div>
@@ -548,7 +611,7 @@ function buildPlansPage(ctx) {
   const addonsHtml = data.addons.map(a => `
     <div class="pricing-addon">
       <div class="pricing-addon-name"><i class="ph ${a.icon}"></i> ${escapeHTML(a.name)}</div>
-      <div class="pricing-addon-price">${escapeHTML(a.price)} <span>${escapeHTML(a.unit)}</span></div>
+      <div class="pricing-addon-price">${formatCurrency(smmlvPct(a.pct))} <span>${escapeHTML(a.unit)}</span></div>
     </div>
   `).join("");
 
@@ -559,7 +622,14 @@ function buildPlansPage(ctx) {
       <h3 class="pricing-addons-title">Consumo adicional</h3>
       <div class="pricing-addons">${addonsHtml}</div>
     </section>
-    <p class="proposal-note">${escapeHTML(data.pricingFootnote)}</p>
+    <div class="proposal-callout" style="margin-top: 18px;">
+      <i class="ph ph-rocket-launch"></i>
+      <p><strong>Implementación (pago inicial único): ${formatCurrency(smmlvPct(PROPOSAL_IMPLEMENTATION_PCT))}</strong>, equivalente al ${PROPOSAL_IMPLEMENTATION_PCT}% del SMMLV. Incluye el levantamiento del requerimiento, la habilitación de módulos, el cargue de información inicial y el diseño y desarrollo de los módulos de operación pactados en la negociación.</p>
+    </div>
+    <div class="proposal-callout" style="margin-top: 14px;">
+      <i class="ph ph-currency-circle-dollar"></i>
+      <p><strong>Valores en pesos colombianos (COP)</strong> calculados sobre el SMMLV ${PROPOSAL_SMMLV.year} (${formatCurrency(PROPOSAL_SMMLV.value)}) y actualizados cada año con el nuevo salario mínimo. No incluyen IVA. Los nuevos requerimientos se cotizan por separado.</p>
+    </div>
   `;
 }
 
@@ -591,7 +661,7 @@ function buildComparisonPage(ctx) {
           ${plans.map(p => `
             <th class="${p.featured ? "cmp-featured" : ""}">
               <span class="cmp-plan-name">${escapeHTML(p.name)}</span>
-              <span class="cmp-plan-price">${escapeHTML(p.period ? `${p.price} ${p.period}` : `Desde ${formatCurrency(p.monthly, 0)} / mes`)}</span>
+              <span class="cmp-plan-price">${p.fromPrice ? "Desde " : ""}${formatCurrency(smmlvPct(p.pct))} / mes · ${p.pct}% SMMLV</span>
             </th>
           `).join("")}
         </tr>
@@ -609,6 +679,7 @@ function buildSupportPage(ctx) {
     <div class="proposal-tile">
       <i class="ph ${c.icon} proposal-tile-icon"></i>
       <h4>${escapeHTML(c.title)}</h4>
+      ${ctx.form[c.contact] ? `<span class="proposal-tile-price">${escapeHTML(ctx.form[c.contact])}</span>` : ""}
       <p>${escapeHTML(c.text)}</p>
     </div>
   `).join("");
@@ -618,10 +689,6 @@ function buildSupportPage(ctx) {
       <td class="cmp-label"><strong>${escapeHTML(sev.level)}</strong><span class="cmp-desc">${escapeHTML(sev.desc)}</span></td>
       ${sev.times.map((t, i) => `<td class="${plans[i].featured ? "cmp-featured" : ""}">${escapeHTML(t)}</td>`).join("")}
     </tr>
-  `).join("");
-
-  const creditRows = s.credits.map(c => `
-    <tr><td class="cmp-label">${escapeHTML(c.range)}</td><td>${escapeHTML(c.credit)}</td></tr>
   `).join("");
 
   return `
@@ -637,18 +704,13 @@ function buildSupportPage(ctx) {
       <tbody>${severityRows}</tbody>
     </table>
 
-    <div class="proposal-two-cols">
-      <div>
-        <h3 class="proposal-h3">Mantenimiento y actualizaciones</h3>
-        <ul class="proposal-list">${s.maintenance.map(m => `<li><i class="ph-fill ph-check-circle"></i><span>${escapeHTML(m)}</span></li>`).join("")}</ul>
-      </div>
-      <div>
-        <h3 class="proposal-h3">Créditos por incumplimiento de disponibilidad</h3>
-        <table class="cmp-table compact credits-table">
-          <thead><tr><th>Disponibilidad mensual</th><th>Crédito</th></tr></thead>
-          <tbody>${creditRows}</tbody>
-        </table>
-      </div>
+    <h3 class="proposal-h3">Mantenimiento y actualizaciones</h3>
+    <ul class="proposal-list">${s.maintenance.map(m => `<li><i class="ph-fill ph-check-circle"></i><span>${escapeHTML(m)}</span></li>`).join("")}</ul>
+
+    <h3 class="proposal-h3">Horas de soporte y desarrollo</h3>
+    <div class="proposal-callout" style="margin-top: 0;">
+      <i class="ph ph-clock-countdown"></i>
+      <p>Cada plan incluye una bolsa mensual de horas: <strong>Básico 8 horas</strong>, <strong>Profesional 16 horas</strong> y <strong>Enterprise 32 horas</strong>. Cubren soporte funcional, ajustes menores, nuevos reportes y cambios de configuración. Las horas no son acumulables de un mes a otro. Las horas adicionales se cobran a ${formatCurrency(smmlvPct(5))} por hora (5% del SMMLV) o con el paquete de 10 horas a ${formatCurrency(smmlvPct(45))} (45% del SMMLV). Los módulos nuevos se cotizan por separado.</p>
     </div>
   `;
 }
@@ -669,15 +731,16 @@ function buildTermsPage(ctx) {
 
 function computeProposalQuote(plan, form) {
   const months = form.months;
+  const monthly = smmlvPct(plan.pct);
   const extraUsers = plan.includedUsers === null ? 0 : Math.max(0, form.users - plan.includedUsers);
   const usersLabel = plan.includedUsers === null ? "usuarios ilimitados" : `${plan.includedUsers} usuarios`;
 
   const items = [
     {
       concept: `Suscripción plan ${plan.name}`,
-      detail: `${months} ${months === 1 ? "mes" : "meses"} · incluye ${usersLabel}`,
+      detail: `${months} ${months === 1 ? "mes" : "meses"} · ${plan.pct}% del SMMLV ${PROPOSAL_SMMLV.year} · incluye ${usersLabel}`,
       qty: months,
-      unit: plan.monthly
+      unit: monthly
     }
   ];
 
@@ -686,12 +749,12 @@ function computeProposalQuote(plan, form) {
       concept: "Usuarios adicionales",
       detail: `${extraUsers} ${extraUsers === 1 ? "usuario" : "usuarios"} × ${months} ${months === 1 ? "mes" : "meses"}`,
       qty: extraUsers * months,
-      unit: PROPOSAL_EXTRA_USER_PRICE
+      unit: smmlvPct(PROPOSAL_EXTRA_USER_PCT)
     });
   }
 
   items.push(
-    { concept: "Implementación y configuración inicial", detail: "Pago único · creación del tenant, parametrización y carga inicial", qty: 1, unit: plan.setupFee },
+    { concept: "Implementación", detail: `Pago inicial único (${PROPOSAL_IMPLEMENTATION_PCT}% del SMMLV) · levantamiento del requerimiento, habilitación de módulos, cargue de información inicial y desarrollo de los módulos de operación pactados`, qty: 1, unit: smmlvPct(PROPOSAL_IMPLEMENTATION_PCT) },
     { concept: "Capacitación inicial", detail: `${plan.training} · incluida en el plan`, qty: 1, unit: 0 }
   );
 
@@ -700,11 +763,8 @@ function computeProposalQuote(plan, form) {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   // Pago anual: 2 meses gratis por cada año completo contratado
   const freeMonths = Math.floor(months / 12) * 2;
-  const discount = freeMonths * plan.monthly;
-  const taxable = subtotal - discount;
-  const tax = taxable * PROPOSAL_TAX_RATE;
-
-  return { items, subtotal, freeMonths, discount, tax, total: taxable + tax };
+  const discount = freeMonths * monthly;
+  return { items, subtotal, freeMonths, discount, total: subtotal - discount };
 }
 
 function buildQuotePage(ctx) {
@@ -721,7 +781,7 @@ function buildQuotePage(ctx) {
   `).join("");
 
   return `
-    ${buildSectionHeading("06 · Cotización", "Cotización del servicio")}
+    ${buildSectionHeading("07 · Cotización", "Cotización del servicio")}
 
     <div class="quote-meta">
       <div><span>Cliente</span><strong>${escapeHTML(form.client)}</strong></div>
@@ -740,24 +800,24 @@ function buildQuotePage(ctx) {
     <div class="quote-totals">
       <div><span>Subtotal</span><strong>${formatCurrency(quote.subtotal)}</strong></div>
       ${quote.discount > 0 ? `<div class="discount"><span>Descuento pago anual (${quote.freeMonths} meses gratis)</span><strong>− ${formatCurrency(quote.discount)}</strong></div>` : ""}
-      <div><span>IVA (${Math.round(PROPOSAL_TAX_RATE * 100)}%)</span><strong>${formatCurrency(quote.tax)}</strong></div>
-      <div class="grand"><span>Total inversión</span><strong>${formatCurrency(quote.total)} USD</strong></div>
+      <div class="grand"><span>Total inversión</span><strong>${formatCurrency(quote.total)} COP</strong></div>
     </div>
 
     <div class="proposal-two-cols">
       <div>
         <h3 class="proposal-h3">Forma de pago</h3>
         <ul class="proposal-list">
-          <li><i class="ph-fill ph-check-circle"></i><span>Implementación: 100% al aprobar la propuesta.</span></li>
+          <li><i class="ph-fill ph-check-circle"></i><span>Implementación: pago inicial único al aprobar la propuesta.</span></li>
           <li><i class="ph-fill ph-check-circle"></i><span>Suscripción: ${form.months >= 12 ? "pago anticipado por año" : "pago mensual anticipado"}.</span></li>
           <li><i class="ph-fill ph-check-circle"></i><span>Transferencia bancaria o tarjeta de crédito.</span></li>
-          <li><i class="ph-fill ph-check-circle"></i><span>Valores en USD; pueden facturarse en moneda local a la TRM del día.</span></li>
+          <li><i class="ph-fill ph-check-circle"></i><span>Valores en COP calculados sobre el SMMLV ${PROPOSAL_SMMLV.year} (${formatCurrency(PROPOSAL_SMMLV.value)}).</span></li>
         </ul>
       </div>
       <div>
         <h3 class="proposal-h3">Observaciones</h3>
         <ul class="proposal-list">
-          ${plan.period ? "" : `<li><i class="ph-fill ph-info"></i><span>El plan Enterprise se cotiza con precio de referencia; el valor final depende del alcance.</span></li>`}
+          ${plan.fromPrice ? `<li><i class="ph-fill ph-info"></i><span>El plan Enterprise se cotiza con precio de referencia; el valor final depende del alcance.</span></li>` : ""}
+          <li><i class="ph-fill ph-info"></i><span>Nuevos requerimientos (p. ej. WhatsApp vía API de Meta) se cotizan aparte y pueden o no modificar la mensualidad.</span></li>
           <li><i class="ph-fill ph-info"></i><span>Consumos adicionales (almacenamiento, correos) se facturan según uso.</span></li>
           <li><i class="ph-fill ph-info"></i><span>Esta cotización tiene una validez de ${PROPOSAL_VALIDITY_DAYS} días calendario.</span></li>
         </ul>
@@ -779,7 +839,7 @@ function buildNextStepsPage(ctx) {
       <i class="ph ${s.icon} proposal-tile-icon"></i>
       <h4>${escapeHTML(s.name)}</h4>
       <p>${escapeHTML(s.text)}</p>
-      <span class="proposal-tile-price">${escapeHTML(s.price)}</span>
+      <span class="proposal-tile-price">${s.pct ? `${formatCurrency(smmlvPct(s.pct))} ${escapeHTML(s.unit)}` : escapeHTML(s.price)}</span>
     </div>
   `).join("");
 
@@ -791,7 +851,7 @@ function buildNextStepsPage(ctx) {
   `).join("");
 
   return `
-    ${buildSectionHeading("07 · Crecimiento", "Servicios opcionales y futuras cotizaciones", "La plataforma evoluciona contigo. Estos servicios pueden incorporarse en cualquier momento mediante una cotización independiente.")}
+    ${buildSectionHeading("06 · Crecimiento", "Servicios opcionales y futuras cotizaciones", "La plataforma evoluciona contigo. Estos servicios pueden incorporarse en cualquier momento mediante una cotización independiente.")}
     <div class="proposal-tiles cols-3">${services}</div>
 
     <h3 class="proposal-h3">Próximos pasos</h3>
@@ -801,9 +861,8 @@ function buildNextStepsPage(ctx) {
       <h3>¿Listo para empezar?</h3>
       <p>Estamos a tu disposición para resolver dudas, ajustar el alcance o agendar una demostración en vivo.</p>
       <div class="closing-contact">
-        <span><i class="ph ph-envelope-simple"></i> ${escapeHTML(data.company.email)}</span>
-        <span><i class="ph ph-globe"></i> ${escapeHTML(data.company.web)}</span>
-        <span><i class="ph ph-phone"></i> ${escapeHTML(data.company.phone)}</span>
+        ${ctx.form.email ? `<span><i class="ph ph-envelope-simple"></i> ${escapeHTML(ctx.form.email)}</span>` : ""}
+        ${ctx.form.phone ? `<span><i class="ph ph-whatsapp-logo"></i> ${escapeHTML(ctx.form.phone)}</span>` : ""}
       </div>
     </div>
   `;
@@ -813,8 +872,8 @@ function buildNextStepsPage(ctx) {
    Helpers
    ========================================================================== */
 
-function formatCurrency(value, decimals = 2) {
-  return "$" + value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+function formatCurrency(value) {
+  return "$" + Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 function formatLongDate(date) {
